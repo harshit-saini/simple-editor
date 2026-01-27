@@ -10,7 +10,7 @@ interface CodeEditorProps {
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language = 'typescript', files, fileName }) => {
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
+  const handleEditorDidMount: OnMount = (_, monaco) => {
     // Configure Monaco
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ES2020,
@@ -27,10 +27,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language = 'typ
     // monaco.languages.typescript.typescriptDefaults.addExtraLib(...)
   };
 
-  // Sync files to models for Intellisense
-  React.useEffect(() => {
-     // Trigger sync on files change
-  }, [files]);
+
   
   const monacoRef = React.useRef<any>(null);
 

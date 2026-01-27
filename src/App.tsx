@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import CodeEditor from './components/CodeEditor';
 import Console, { LogEntry } from './components/Console';
 import FileExplorer from './components/FileExplorer';
