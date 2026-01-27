@@ -7,12 +7,10 @@ import { useFileSystem } from './contexts/FileSystemContext';
 import { executeCode } from './utils/executor';
 
 function App() {
-  const { activeFile, files, updateFile } = useFileSystem();
+  const { activeFile, files, updateFile, languageMode, setLanguageMode } = useFileSystem();
   const [logs, setLogs] = useState<LogEntry[]>([]);
-
-  // We need to sync the editor content with the active file content
-  // When activeFile changes, we want the editor to show the new content.
-  // When editor changes, we update the file in context.
+  const [previewContent, setPreviewContent] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   
   const activeFileObj = activeFile ? files[activeFile] : null;
   const code = activeFileObj ? activeFileObj.content : '';
@@ -41,13 +39,16 @@ function App() {
         return;
     }
 
-    addLog({ type: 'info', message: [`Transpiling and executing ${activeFile}...`] });
+    addLog({ type: 'info', message: [`Executing ${activeFile}...`] });
     
     // Small timeout to allow UI to update
     setTimeout(() => {
         try {
-            // executeCode now handles transpilation and module resolution
-            executeCode(activeFile, files, addLog);
+            // executeCode now handles transpilation, module resolution, and routing by language
+            executeCode(activeFile, files, addLog, (htmlContent) => {
+                setPreviewContent(htmlContent);
+                setShowPreview(true);
+            });
         } catch (err: any) {
             addLog({ type: 'error', message: [err.message] });
         }
@@ -66,7 +67,31 @@ function App() {
         padding: '0 20px',
         borderBottom: '1px solid #111'
       }}>
-        <div style={{ fontWeight: 'bold', color: '#fff' }}>TS Editor Pro</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div style={{ fontWeight: 'bold', color: '#fff' }}>TS Editor Pro</div>
+            <select 
+                value={languageMode} 
+                onChange={(e) => {
+                    const mode = e.target.value as any;
+                    if (window.confirm('Switching language will reset your workspace. Are you sure?')) {
+                        setLanguageMode(mode);
+                    }
+                }}
+                style={{
+                    backgroundColor: '#444',
+                    color: '#fff',
+                    border: '1px solid #555',
+                    borderRadius: '4px',
+                    padding: '2px 5px',
+                    fontSize: '12px'
+                }}
+            >
+                <option value="node">Node.js (TS/JS)</option>
+                <option value="python">Python</option>
+                <option value="html">HTML/CSS</option>
+            </select>
+        </div>
+
         <button 
           onClick={handleRun}
           style={{
@@ -98,22 +123,41 @@ function App() {
           {/* Tabs Bar */}
           <Tabs />
           
-          {/* Code Editor */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            {activeFileObj ? (
-               <CodeEditor 
-                  code={code} 
-                  onChange={handleCodeChange} 
-                  language={language}
-                  files={files}
-                  fileName={activeFile || ''}
-               />
-            ) : (
-                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
-                    Select a file to edit
-                </div>
-            )}
+          {/* Main Content Area: Editor + Preview */}
+          <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+              {/* Code Editor */}
+              <div style={{ flex: 1, position: 'relative', display: showPreview ? 'none' : 'block' }}>
+                {activeFileObj ? (
+                   <CodeEditor 
+                      code={code} 
+                      onChange={handleCodeChange} 
+                      language={language}
+                      files={files}
+                      fileName={activeFile || ''}
+                   />
+                ) : (
+                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                        Select a file to edit
+                    </div>
+                )}
+              </div>
+
+               {/* Preview Pane */}
+               {showPreview && (
+                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #333', backgroundColor: '#fff' }}>
+                     <div style={{ padding: '5px', backgroundColor: '#eee', color: '#333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ccc' }}>
+                         <span style={{ fontWeight: 'bold', fontSize: '12px' }}>HTML Preview</span>
+                         <button onClick={() => setShowPreview(false)} style={{ cursor: 'pointer', border: '1px solid #999', padding: '2px 8px', borderRadius: '3px', background: '#fff' }}>Close</button>
+                     </div>
+                     <iframe 
+                        title="preview"
+                        style={{ flex: 1, border: 'none', width: '100%', height: '100%' }}
+                        srcDoc={previewContent || ''}
+                     />
+                 </div>
+               )}
           </div>
+
 
           {/* Bottom Panel: Console (could be collapsible or resizable, fixed height for now) */}
           <div style={{ height: '200px', borderTop: '1px solid #333', display: 'flex', flexDirection: 'column' }}>

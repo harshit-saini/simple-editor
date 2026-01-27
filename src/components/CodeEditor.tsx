@@ -14,7 +14,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language = 'typ
     // Configure Monaco
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ES2020,
-      allowNonTsExtensions: true,
+      allowNonTsExtensions: false,
       moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
       module: monaco.languages.typescript.ModuleKind.CommonJS,
       noEmit: true,
@@ -51,20 +51,27 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language = 'typ
            // We use formatted path "file:///path"
            // Note: Monaco's 'file:///' protocol is standard. 
            // Ensure we don't double slash if path already has it? No, path is 'utils.ts'.
-           const uri = monaco.Uri.parse(`file:///${path}`);
-           let model = monaco.editor.getModel(uri);
            
-           if (!model) {
-               model = monaco.editor.createModel(
-                   files[path].content,
-                   files[path].language === 'typescript' ? 'typescript' : 'javascript',
-                   uri
-               );
-           } else {
-               // Update content if changed externally 
-               if (path !== fileName && model.getValue() !== files[path].content) {
-                   model.setValue(files[path].content);
+           try {
+               const uri = monaco.Uri.parse(`file:///${path}`);
+               let model = monaco.editor.getModel(uri);
+               
+               if (!model) {
+                   model = monaco.editor.createModel(
+                       files[path].content,
+                           files[path].language === 'typescript' ? 'typescript' : 
+                               (files[path].language === 'python' ? 'python' : 
+                               (files[path].language === 'html' ? 'html' : 'javascript')),
+                       uri
+                   );
+               } else {
+                   // Update content if changed externally 
+                   if (path !== fileName && model.getValue() !== files[path].content) {
+                       model.setValue(files[path].content);
+                   }
                }
+           } catch (e) {
+               console.error("Error in syncModels:", e);
            }
        });
    };

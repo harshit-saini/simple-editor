@@ -16,11 +16,38 @@ export const transpile = (code: string): string => {
   }
 };
 
+import { executePythonCode } from './pythonExecutor';
+
 export const executeCode = (
   entryFile: string,
-  files: { [name: string]: { content: string } },
-  addLog: (entry: Omit<LogEntry, 'timestamp'>) => void
+  files: { [name: string]: { content: string, language: string } },
+  addLog: (entry: Omit<LogEntry, 'timestamp'>) => void,
+  onPreview?: (content: string) => void
 ) => {
+  const file = files[entryFile];
+  if (!file) {
+      addLog({ type: 'error', message: [`File not found: ${entryFile}`] });
+      return;
+  }
+  
+  addLog({ type: 'info', message: [`Run request for ${entryFile} (${file.language})`] });
+
+  if (file.language === 'python') {
+      executePythonCode(file.content, addLog);
+      return;
+  }
+
+  if (file.language === 'html') {
+      if (onPreview) {
+          onPreview(file.content);
+          addLog({ type: 'info', message: ['Opening HTML Preview...'] });
+      } else {
+          addLog({ type: 'warn', message: ['HTML Preview not supported in this view'] });
+      }
+      return;
+  }
+
+  // Default to JavaScript/TypeScript execution from here
   // Create a proxy console to capture logs
   const customConsole = {
     log: (...args: any[]) => addLog({ type: 'log', message: args.map(String) }),
@@ -29,6 +56,7 @@ export const executeCode = (
     info: (...args: any[]) => addLog({ type: 'info', message: args.map(String) }),
     clear: () => {} 
   };
+// ... rest of the JS execution logic ...
 
   const moduleCache: { [path: string]: any } = {};
 
