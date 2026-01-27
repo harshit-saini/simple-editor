@@ -24,7 +24,34 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language = 'typ
     });
     
     // Add extra lib if needed, but basic ES2020 should be there.
-    // monaco.languages.typescript.typescriptDefaults.addExtraLib(...)
+    // Fix for React Highlighting: Inject generic module definitions
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(
+      `
+      declare module 'react' {
+        export = React;
+      }
+      declare namespace React {
+         function useState<T>(initialState: T | (() => T)): [T, (newState: T | ((prevState: T) => T)) => void];
+         function useEffect(effect: () => void | (() => void), deps?: ReadonlyArray<any>): void;
+         function createContext<T>(defaultValue: T): any;
+         function useContext<T>(context: any): T;
+         const createElement: any;
+         type ReactNode = any;
+      }
+      
+      declare module 'react-dom/client' {
+          export function createRoot(container: HTMLElement): { render: (node: any) => void };
+      }
+      
+      // JSX Intrinsic Elements
+      declare namespace JSX {
+          interface IntrinsicElements {
+              [elemName: string]: any;
+          }
+      }
+      `,
+      'file:///node_modules/@types/react/index.d.ts'
+    );
   };
 
 
@@ -53,15 +80,18 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language = 'typ
                const uri = monaco.Uri.parse(`file:///${path}`);
                let model = monaco.editor.getModel(uri);
                
-               if (!model) {
-                   model = monaco.editor.createModel(
-                       files[path].content,
-                           files[path].language === 'typescript' ? 'typescript' : 
-                               (files[path].language === 'python' ? 'python' : 
-                               (files[path].language === 'html' ? 'html' : 'javascript')),
-                       uri
-                   );
-               } else {
+                   if (!model) {
+                       // Only create models for TS/JS/HTML/Python (that Monaco supports well)
+                       // Markdown files etc don't need full TS language features validation 
+                       const validLang = files[path].language;
+                       if (['typescript', 'javascript', 'html', 'python', 'css', 'json', 'sql', 'markdown'].includes(validLang)) {
+                           model = monaco.editor.createModel(
+                               files[path].content,
+                               validLang === 'react' ? 'typescript' : validLang, 
+                               uri
+                           );
+                       }
+                   } else {
                    // Update content if changed externally 
                    if (path !== fileName && model.getValue() !== files[path].content) {
                        model.setValue(files[path].content);

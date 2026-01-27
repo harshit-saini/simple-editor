@@ -89,6 +89,10 @@ function App() {
                 <option value="node">Node.js (TS/JS)</option>
                 <option value="python">Python</option>
                 <option value="html">HTML/CSS</option>
+                <option value="markdown">Markdown</option>
+                <option value="sql">SQL (SQLite)</option>
+                <option value="react">React (TSX)</option>
+                <option value="go">Go (Wasm)</option>
             </select>
         </div>
 
