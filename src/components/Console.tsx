@@ -18,7 +18,7 @@ const Console: React.FC<ConsoleProps> = ({ logs, onClear }) => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  const getColor = (type: LogEntry['type']) => {
+  const getLogColor = (type: LogEntry['type']) => {
     switch (type) {
       case 'error': return '#ff6b6b';
       case 'warn': return '#feca57';
@@ -42,35 +42,56 @@ const Console: React.FC<ConsoleProps> = ({ logs, onClear }) => {
         display: 'flex', 
         justifyContent: 'space-between',
         alignItems: 'center',
-        fontWeight: 'bold',
-        color: '#ccc'
+        // fontWeight: 'bold', // Removed duplicate
+        fontSize: '0.8rem',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        fontWeight: 500
       }}>
-        <span>CONSOLE</span>
-        <button 
-          onClick={onClear}
-          style={{
-            background: 'transparent',
-            border: '1px solid #555',
-            color: '#ccc',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            borderRadius: '4px'
-          }}
+        <span>TERMINAL / CONSOLE</span>
+        <button
+            onClick={onClear}
+            style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--md-text-medium)',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+            }}
+            title="Clear Console"
         >
-          Clear
+            &oslash;
         </button>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '8px 16px',
+        fontFamily: 'var(--font-mono)',
+        fontSize: '13px'
+      }}>
         {logs.map((log, i) => (
-          <div key={i} style={{ marginBottom: '4px', display: 'flex' }}>
-            <span style={{ color: '#666', marginRight: '8px', minWidth: '80px' }}>
-              {new Date(log.timestamp).toLocaleTimeString()}
+          <div key={i} style={{
+              color: getLogColor(log.type),
+              marginBottom: '4px',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              paddingBottom: '2px',
+              wordWrap: 'break-word'
+          }}>
+            <span style={{ color: 'var(--md-text-disabled)', marginRight: '8px', userSelect: 'none' }}>
+                {new Date(log.timestamp).toLocaleTimeString()}
             </span>
-            <span style={{ color: getColor(log.type), whiteSpace: 'pre-wrap' }}>
-              {log.message.join(' ')}
-            </span>
+             {/* Render message lines cleanly */}
+            {log.message.map((line, j) => (
+                <span key={j}>{line} </span>
+            ))}
           </div>
         ))}
+        {logs.length === 0 && (
+            <div style={{ color: 'var(--md-text-disabled)', fontStyle: 'italic', marginTop: '10px' }}>
+                Ready to execute...
+            </div>
+        )}
         <div ref={endRef} />
       </div>
     </div>

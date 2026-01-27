@@ -16,15 +16,22 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language = 'typ
     // Configure Monaco
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ES2020,
-      allowNonTsExtensions: false,
+      allowNonTsExtensions: true, // Allow .ts check on other files if needed, but mainly to avoid errors on in-memory models
       moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
       module: monaco.languages.typescript.ModuleKind.CommonJS,
       noEmit: true,
       esModuleInterop: true,
-      baseUrl: '.', // Important for resolving absolute imports if used
-      paths: { '*': ['*'] }, // Fallback for path mapping
+      baseUrl: '.',
+      paths: { '*': ['*'] },
       strict: true,
     });
+
+    // Enable eager sync so the worker knows about all models
+    monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+    monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
+
+    // Suppress some noise if needed (Optional)
+    // monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({ ... });
     
     // Add extra lib if needed, but basic ES2020 should be there.
     // Fix for React Highlighting: Inject generic module definitions

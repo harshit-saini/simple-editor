@@ -5,33 +5,48 @@ const Tabs: React.FC = () => {
   const { openFiles, activeFile, selectFile, closeFile } = useFileSystem();
 
   return (
-    <div style={{ display: 'flex', backgroundColor: '#252526', overflowX: 'auto', borderBottom: '1px solid #333' }}>
+    <div style={{ 
+        display: 'flex', 
+        backgroundColor: 'var(--md-surface-1)', 
+        borderBottom: 'var(--md-divider)',
+        overflowX: 'auto' 
+    }}>
       {openFiles.map((fileName) => (
         <div
           key={fileName}
           onClick={() => selectFile(fileName)}
           style={{
-            padding: '8px 15px',
-            backgroundColor: activeFile === fileName ? '#1e1e1e' : '#2d2d2d',
-            color: activeFile === fileName ? '#fff' : '#969696',
+            padding: '8px 16px',
             cursor: 'pointer',
-            borderRight: '1px solid #252526',
+            backgroundColor: activeFile === fileName ? 'var(--md-surface-2)' : 'transparent',
+            color: activeFile === fileName ? 'var(--md-text-high)' : 'var(--md-text-medium)',
+            borderRight: 'var(--md-divider)',
+            borderTop: activeFile === fileName ? '2px solid var(--md-primary)' : '2px solid transparent', /* Top or Bottom indicator? Material usually bottom, VS Code top. Let's do top for editor feel */
+            minWidth: '100px',
             display: 'flex',
             alignItems: 'center',
-            minWidth: '100px',
             justifyContent: 'space-between',
-            borderTop: activeFile === fileName ? '1px solid #007acc' : '1px solid transparent',
+            gap: '8px',
+            fontSize: '0.85rem',
+            userSelect: 'none'
           }}
         >
-          <span style={{ marginRight: '10px' }}>{fileName}</span>
+          <span>{fileName}</span>
           <span
             onClick={(e) => {
               e.stopPropagation();
               closeFile(fileName);
             }}
-            style={{ fontSize: '14px', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', ':hover': { backgroundColor: '#444' } } as React.CSSProperties}
+            style={{
+              padding: '0 4px',
+              borderRadius: '50%',
+              fontSize: '12px',
+              opacity: 0.6
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            ×
+            ✕
           </span>
         </div>
       ))}

@@ -1,27 +1,122 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* Material Design Dark Theme Palette */
+  --md-bg-root: #121212;
+  --md-surface-1: #1e1e1e;
+  --md-surface-2: #252525;
+  --md-surface-3: #2c2c2c;
+  /* Lighter for hover/active */
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  --md-primary: #90caf9;
+  /* Blue 200 */
+  --md-primary-hover: #42a5f5;
+  /* Blue 400 */
+  --md-secondary: #ce93d8;
+  /* Purple 200 */
+  --md-error: #cf6679;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --md-text-high: rgba(255, 255, 255, 0.87);
+  --md-text-medium: rgba(255, 255, 255, 0.60);
+  --md-text-disabled: rgba(255, 255, 255, 0.38);
+
+  --md-border-color: rgba(255, 255, 255, 0.12);
+  --md-divider: 1px solid var(--md-border-color);
+
+  --font-sans: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', 'Consolas', monospace;
+
+  /* Shadows */
+  --md-shadow-1: 0 1px 1px 0 rgba(0, 0, 0, 0.14), 0 2px 1px -1px rgba(0, 0, 0, 0.12), 0 1px 3px 0 rgba(0, 0, 0, 0.20);
+  --md-shadow-2: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12);
 }
 
 body {
   margin: 0;
   display: flex;
   place-items: center;
+  /* Keeping existing, though often top-left alignment is better */
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--md-bg-root);
+  color: var(--md-text-high);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   width: 100%;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--md-bg-root);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #424242;
+  border: 2px solid var(--md-bg-root);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #616161;
+}
+
+/* Material Button */
+.btn-material {
+  border: none;
+  background-color: var(--md-surface-3);
+  /* Secondary button default */
+  color: var(--md-text-high);
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.875rem;
+  letter-spacing: 0.02857em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-material:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  /* White overlay for hover state */
+}
+
+.btn-primary {
+  background-color: var(--md-primary);
+  color: #000;
+  /* Dark text on light primary */
+}
+
+.btn-primary:hover {
+  background-color: var(--md-primary-hover);
+  box-shadow: var(--md-shadow-2);
+}
+
+/* Icon button */
+.btn-icon {
+  background: transparent;
+  color: var(--md-text-medium);
+  border-radius: 50%;
+  padding: 8px;
+  min-width: 0;
+}
+
+.btn-icon:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--md-text-high);
 }

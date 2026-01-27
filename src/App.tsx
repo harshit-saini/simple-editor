@@ -56,61 +56,59 @@ function App() {
   };
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e', color: '#ccc' }}>
-      {/* Top Bar / Header */}
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--md-bg-root)', color: 'var(--md-text-high)' }}>
+      {/* Top App Bar */}
       <div style={{ 
-        height: '40px',
-        backgroundColor: '#333', 
+        height: '48px', /* Standard Material App Bar Height (dense) */
+        backgroundColor: 'var(--md-surface-2)', 
         display: 'flex', 
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '0 20px',
-        borderBottom: '1px solid #111'
+        padding: '0 16px',
+        boxShadow: 'var(--md-shadow-1)',
+        zIndex: 10
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div style={{ fontWeight: 'bold', color: '#fff' }}>TS Editor Pro</div>
-            <select 
-                value={languageMode} 
-                onChange={(e) => {
-                    const mode = e.target.value as any;
-                    if (window.confirm('Switching language will reset your workspace. Are you sure?')) {
-                        setLanguageMode(mode);
-                    }
-                }}
-                style={{
-                    backgroundColor: '#444',
-                    color: '#fff',
-                    border: '1px solid #555',
-                    borderRadius: '4px',
-                    padding: '2px 5px',
-                    fontSize: '12px'
-                }}
-            >
-                <option value="node">Node.js (TS/JS)</option>
-                <option value="python">Python</option>
-                <option value="html">HTML/CSS</option>
-                <option value="markdown">Markdown</option>
-                <option value="sql">SQL (SQLite)</option>
-                <option value="react">React (TSX)</option>
-                <option value="go">Go (Wasm)</option>
-            </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <div style={{ fontWeight: '500', fontSize: '1.1rem', color: 'var(--md-text-high)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: 'var(--md-primary)' }}>&lt;/&gt;</span> TS Editor Pro
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--md-text-medium)' }}>MODE:</label>
+                <select 
+                    value={languageMode} 
+                    onChange={(e) => {
+                        const mode = e.target.value as any;
+                        if (window.confirm('Switching language will reset your workspace. Are you sure?')) {
+                            handleClearLogs();
+                            setLanguageMode(mode);
+                        }
+                    }}
+                    style={{
+                        backgroundColor: 'var(--md-surface-1)',
+                        color: 'var(--md-text-high)',
+                        border: '1px solid var(--md-border-color)',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        cursor: 'pointer'
+                    }}
+                >
+                    <option value="node">Node.js (TS/JS)</option>
+                    <option value="python">Python</option>
+                    <option value="html">HTML/CSS</option>
+                    <option value="markdown">Markdown</option>
+                    <option value="sql">SQL (SQLite)</option>
+                    <option value="react">React (TSX)</option>
+                    <option value="go">Go (Wasm)</option>
+                </select>
+            </div>
         </div>
 
         <button 
+          className="btn-material btn-primary"
           onClick={handleRun}
-          style={{
-            padding: '6px 14px',
-            backgroundColor: '#27ae60',
-            color: 'white',
-            border: 'none',
-            borderRadius: '3px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px'
-          }}
         >
           <span>▶</span> RUN
         </button>
@@ -140,18 +138,36 @@ function App() {
                       fileName={activeFile || ''}
                    />
                 ) : (
-                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
-                        Select a file to edit
+                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--md-text-disabled)' }}>
+                        Select a file to start editing
                     </div>
                 )}
               </div>
 
-               {/* Preview Pane */}
+               {/* Preview Pane - as a floating or split panel */}
                {showPreview && (
-                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderLeft: '1px solid #333', backgroundColor: '#fff' }}>
-                     <div style={{ padding: '5px', backgroundColor: '#eee', color: '#333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ccc' }}>
-                         <span style={{ fontWeight: 'bold', fontSize: '12px' }}>HTML Preview</span>
-                         <button onClick={() => setShowPreview(false)} style={{ cursor: 'pointer', border: '1px solid #999', padding: '2px 8px', borderRadius: '3px', background: '#fff' }}>Close</button>
+                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderLeft: 'var(--md-divider)', backgroundColor: '#fff' }}>
+                     <div style={{ 
+                         height: '36px', 
+                         backgroundColor: '#f5f5f5', /* Light theme wrapper for preview header */
+                         color: '#333', 
+                         display: 'flex', 
+                         justifyContent: 'space-between', 
+                         alignItems: 'center', 
+                         padding: '0 8px',
+                         borderBottom: '1px solid #e0e0e0' 
+                     }}>
+                         <span style={{ fontWeight: 500, fontSize: '0.8rem' }}>PREVIEW</span>
+                         <button 
+                            onClick={() => setShowPreview(false)} 
+                            style={{ 
+                                cursor: 'pointer', 
+                                border: 'none', 
+                                background: 'transparent',
+                                color: '#666',
+                                fontWeight: 'bold'
+                            }}
+                         >✕</button>
                      </div>
                      <iframe 
                         title="preview"
@@ -163,8 +179,8 @@ function App() {
           </div>
 
 
-          {/* Bottom Panel: Console (could be collapsible or resizable, fixed height for now) */}
-          <div style={{ height: '200px', borderTop: '1px solid #333', display: 'flex', flexDirection: 'column' }}>
+          {/* Bottom Panel: Console */}
+          <div style={{ height: '220px', borderTop: 'var(--md-divider)', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--md-bg-root)' }}>
              <Console logs={logs} onClear={handleClearLogs} />
           </div>
         </div>
