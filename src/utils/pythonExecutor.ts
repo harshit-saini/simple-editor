@@ -62,7 +62,8 @@ const getPyodide = async (addLog: (entry: Omit<LogEntry, 'timestamp'>) => void) 
 };
 
 export const executePythonCode = async (
-  code: string,
+  files: { [name: string]: { content: string, language: string } },
+  entryFile: string,
   addLog: (entry: Omit<LogEntry, 'timestamp'>) => void
 ) => {
   try {
@@ -72,7 +73,28 @@ export const executePythonCode = async (
     py.setStdout({ batched: (msg: string) => addLog({ type: 'log', message: [msg] }) });
     py.setStderr({ batched: (msg: string) => addLog({ type: 'error', message: [msg] }) });
 
-    await py.runPythonAsync(code);
+    // Write all files to Pyodide's virtual filesystem
+    Object.keys(files).forEach(fileName => {
+        const file = files[fileName];
+        if (file.language === 'python' || fileName.endsWith('.py')) {
+             try {
+                 py.FS.writeFile(fileName, file.content, { encoding: "utf8" });
+             } catch (e) {
+                 console.error(`Failed to write ${fileName} to Pyodide FS`, e);
+             }
+        }
+    });
+
+    // Run the entry file
+    const entryContent = files[entryFile]?.content;
+    if (!entryContent) {
+        throw new Error(`Entry file ${entryFile} not found`);
+    }
+
+    // Run the script
+    // We use runPythonAsync. 
+    // Note: If importing other files, they must be in the FS, which we just did.
+    await py.runPythonAsync(entryContent);
   } catch (err: any) {
     addLog({ type: 'error', message: [err.toString()] });
   }

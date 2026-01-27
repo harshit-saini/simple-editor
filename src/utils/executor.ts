@@ -35,7 +35,7 @@ export const executeCode = (
   addLog({ type: 'info', message: [`Run request for ${entryFile} (${file.language})`] });
 
   if (file.language === 'python') {
-      executePythonCode(file.content, addLog);
+      executePythonCode(files, entryFile, addLog);
       return;
   }
 
