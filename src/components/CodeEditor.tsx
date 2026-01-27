@@ -1,5 +1,6 @@
 import React from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
+import { registerPythonIntellisense } from '../utils/pythonIntellisense';
 
 interface CodeEditorProps {
   code: string;
@@ -52,6 +53,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language = 'typ
       `,
       'file:///node_modules/@types/react/index.d.ts'
     );
+    
+    // Register Python Intellisense
+    registerPythonIntellisense(monaco);
   };
 
 
