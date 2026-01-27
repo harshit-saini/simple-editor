@@ -1,21 +1,27 @@
 import React, { useState, useCallback } from 'react';
 import CodeEditor from './components/CodeEditor';
 import Console, { LogEntry } from './components/Console';
-import { transpile, executeCode } from './utils/executor';
-
-const DEFAULT_CODE = `// Write your TypeScript/JavaScript here
-console.log("Hello from the editor!");
-
-const sum = (a: number, b: number): number => a + b;
-console.log("Sum of 2 + 3 =", sum(2, 3));
-`;
+import FileExplorer from './components/FileExplorer';
+import Tabs from './components/Tabs';
+import { useFileSystem } from './contexts/FileSystemContext';
+import { executeCode } from './utils/executor';
 
 function App() {
-  const [code, setCode] = useState<string>(DEFAULT_CODE);
+  const { activeFile, files, updateFile } = useFileSystem();
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
+  // We need to sync the editor content with the active file content
+  // When activeFile changes, we want the editor to show the new content.
+  // When editor changes, we update the file in context.
+  
+  const activeFileObj = activeFile ? files[activeFile] : null;
+  const code = activeFileObj ? activeFileObj.content : '';
+  const language = activeFileObj ? activeFileObj.language : 'typescript';
+
   const handleCodeChange = (value: string | undefined) => {
-    setCode(value || '');
+    if (activeFile && value !== undefined) {
+      updateFile(activeFile, value);
+    }
   };
 
   const handleClearLogs = () => {
@@ -28,13 +34,20 @@ function App() {
 
   const handleRun = () => {
     handleClearLogs();
-    addLog({ type: 'info', message: ['Transpiling and executing...'] });
+    
+    // Check if activeFile is valid
+    if (!activeFile || !activeFileObj) {
+        addLog({ type: 'warn', message: ['No file selected to run'] });
+        return;
+    }
+
+    addLog({ type: 'info', message: [`Transpiling and executing ${activeFile}...`] });
     
     // Small timeout to allow UI to update
     setTimeout(() => {
         try {
-            const jsCode = transpile(code);
-            executeCode(jsCode, addLog);
+            // executeCode now handles transpilation and module resolution
+            executeCode(activeFile, files, addLog);
         } catch (err: any) {
             addLog({ type: 'error', message: [err.message] });
         }
@@ -42,45 +55,72 @@ function App() {
   };
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Toolbar */}
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e', color: '#ccc' }}>
+      {/* Top Bar / Header */}
       <div style={{ 
-        padding: '10px 20px', 
+        height: '40px',
         backgroundColor: '#333', 
         display: 'flex', 
-        gap: '10px',
-        borderBottom: '1px solid #444',
-        alignItems: 'center'
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0 20px',
+        borderBottom: '1px solid #111'
       }}>
-        <h3 style={{ margin: 0, marginRight: '20px', color: '#fff' }}>TS Editor</h3>
+        <div style={{ fontWeight: 'bold', color: '#fff' }}>TS Editor Pro</div>
         <button 
           onClick={handleRun}
           style={{
-            padding: '8px 16px',
+            padding: '6px 14px',
             backgroundColor: '#27ae60',
             color: 'white',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '3px',
             cursor: 'pointer',
-            fontWeight: 'bold',
-            fontSize: '14px'
+            fontSize: '12px',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
           }}
         >
-          Run Code
+          <span>▶</span> RUN
         </button>
       </div>
 
-      {/* Main Content - Horizontal Split (Mobile friendly could be vertical) */}
+      {/* Main Layout Area */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Editor Pane */}
-        <div style={{ flex: 1, borderRight: '1px solid #444' }}>
-          <CodeEditor code={code} onChange={handleCodeChange} />
-        </div>
+        
+        {/* Left Sidebar: File Explorer */}
+        <FileExplorer />
 
-        {/* Console Pane */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <Console logs={logs} onClear={handleClearLogs} />
+        {/* Center: Editor Area */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          {/* Tabs Bar */}
+          <Tabs />
+          
+          {/* Code Editor */}
+          <div style={{ flex: 1, position: 'relative' }}>
+            {activeFileObj ? (
+               <CodeEditor 
+                  code={code} 
+                  onChange={handleCodeChange} 
+                  language={language}
+                  files={files}
+                  fileName={activeFile || ''}
+               />
+            ) : (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                    Select a file to edit
+                </div>
+            )}
+          </div>
+
+          {/* Bottom Panel: Console (could be collapsible or resizable, fixed height for now) */}
+          <div style={{ height: '200px', borderTop: '1px solid #333', display: 'flex', flexDirection: 'column' }}>
+             <Console logs={logs} onClear={handleClearLogs} />
+          </div>
         </div>
+        
       </div>
     </div>
   );

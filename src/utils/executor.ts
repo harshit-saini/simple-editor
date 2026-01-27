@@ -17,7 +17,8 @@ export const transpile = (code: string): string => {
 };
 
 export const executeCode = (
-  code: string, 
+  entryFile: string,
+  files: { [name: string]: { content: string } },
   addLog: (entry: Omit<LogEntry, 'timestamp'>) => void
 ) => {
   // Create a proxy console to capture logs
@@ -26,15 +27,59 @@ export const executeCode = (
     warn: (...args: any[]) => addLog({ type: 'warn', message: args.map(String) }),
     error: (...args: any[]) => addLog({ type: 'error', message: args.map(String) }),
     info: (...args: any[]) => addLog({ type: 'info', message: args.map(String) }),
-    clear: () => {} // Handled by UI
+    clear: () => {} 
+  };
+
+  const moduleCache: { [path: string]: any } = {};
+
+  const require = (path: string) => {
+    // Basic resolution: assume relative paths ./name or just name map to name.ts or name.js
+    // This is very naive.
+    let targetFileName = path.replace('./', '');
+    if (!files[targetFileName]) {
+        if (files[targetFileName + '.ts']) targetFileName += '.ts';
+        else if (files[targetFileName + '.tsx']) targetFileName += '.tsx';
+        else if (files[targetFileName + '.js']) targetFileName += '.js';
+        else throw new Error(`Module not found: ${path}`);
+    }
+
+    if (moduleCache[targetFileName]) {
+        return moduleCache[targetFileName];
+    }
+
+    const fileContent = files[targetFileName].content;
+    const jsCode = transpile(fileContent);
+
+    const module = { exports: {} };
+    const exports = module.exports;
+
+    try {
+        const run = new Function('console', 'require', 'module', 'exports', jsCode);
+        run(customConsole, require, module, exports);
+    } catch (err: any) {
+        throw new Error(`Error executing ${targetFileName}: ${err.message}`);
+    }
+
+    moduleCache[targetFileName] = module.exports;
+    return module.exports;
   };
 
   try {
-    // Wrap code to capture 'console'
-    // We use a Function constructor -> new Function('console', code)
-    // and pass our customConsole as the argument.
-    const run = new Function('console', code);
-    run(customConsole);
+    // Execute the entry file (usually main.ts/active file) using the require mechanism
+    // but without caching it effectively (or just treat it as a module).
+    // We treat the entry execution as a pseudo-require to reuse logic, or just run it.
+    // However, the entry file itself might have exports, so treating it as a module is fine.
+    
+    // We wrapped the logic in require, so let's just use it on the entry file.
+    // BUT, the entry file name comes in as argument.
+    
+    // Actually, executeCode was called with `code` string before. 
+    // Now we change it to take `files` and `entryFileName` (or active file).
+    // The previous caller passed `transpile(code)`. Now we want to control transpilation 
+    // inside here to handle dependencies.
+    
+    require(entryFile);
+
   } catch (err: any) {
     addLog({ type: 'error', message: [err.toString()] });
   }
