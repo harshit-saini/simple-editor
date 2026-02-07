@@ -185,8 +185,6 @@ export const executeCode = (
         const f = files[fileName];
         if (f.language === 'typescript' || f.language === 'javascript' || fileName.endsWith('.ts') || fileName.endsWith('.js') || fileName.endsWith('.tsx')) {
             try {
-                // Determine if JSX/TSX
-                const isJsx = fileName.endsWith('.tsx') || fileName.endsWith('.jsx'); 
                 // We use our existing transpile function (which sets jsx: React)
                 // Note: The transpile function in executor.ts is hardcoded for React JSX but sets target to ES2020 CJS.
                 // This fits our worker 'require' CJS simulation.
@@ -207,12 +205,7 @@ export const executeCode = (
         else if (type === 'info') addLog({ type: 'info', message });
         else if (type === 'finished') {
              if (onFinish) onFinish();
-             // We don't terminate immediately to allow async operations if any were started?
-             // But our worker model is "run script then done" for now. 
-             // If we terminate, we kill asyncs.
-             // If we don't, we leave worker running.
-             // For "Run" button to toggle back, we need to know we are done.
-             // Let's assume done.
+             // Terminate the worker to clean up resources
              terminateExecution();
         }
     };
