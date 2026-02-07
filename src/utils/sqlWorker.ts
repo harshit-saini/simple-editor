@@ -1,8 +1,7 @@
-
 // @ts-ignore
 importScripts('https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js');
 
-const ctx: Worker = self as any;
+const sqlCtx: Worker = self as any;
 let db: any = null;
 
 const initDB = async () => {
@@ -79,16 +78,16 @@ const initDB = async () => {
             (5, 6, 1);
         `);
 
-        ctx.postMessage({ type: 'info', message: ['Database initialized with tables: users, products, orders, order_items'] });
+        sqlCtx.postMessage({ type: 'info', message: ['Database initialized with tables: users, products, orders, order_items'] });
         
     } catch (e: any) {
-        ctx.postMessage({ type: 'error', message: ['Failed to initialize database: ' + e.message] });
+        sqlCtx.postMessage({ type: 'error', message: ['Failed to initialize database: ' + e.message] });
     }
 };
 
 const initPromise = initDB();
 
-ctx.onmessage = async (event) => {
+sqlCtx.onmessage = async (event) => {
     const { start } = event.data;
     if (start) return; 
 
@@ -100,7 +99,7 @@ ctx.onmessage = async (event) => {
     // Handle Schema Request
     if (type === 'get_schema') {
         if (!db) {
-            ctx.postMessage({ type: 'error', message: ['Database not ready for schema'] });
+            sqlCtx.postMessage({ type: 'error', message: ['Database not ready for schema'] });
             return;
         }
         try {
@@ -117,9 +116,9 @@ ctx.onmessage = async (event) => {
                 })) || [];
                 schema.push({ tableName: table, columns });
             }
-            ctx.postMessage({ type: 'schema', schema });
+            sqlCtx.postMessage({ type: 'schema', schema });
         } catch (e: any) {
-            ctx.postMessage({ type: 'error', message: ['Failed to fetch schema: ' + e.message] });
+            sqlCtx.postMessage({ type: 'error', message: ['Failed to fetch schema: ' + e.message] });
         }
         return;
     }
@@ -133,7 +132,7 @@ ctx.onmessage = async (event) => {
             // Use prepare to check syntax without executing
             const stmt = db.prepare(query);
             stmt.free(); // Valid
-            ctx.postMessage({ type: 'validation_result', markers: [] });
+            sqlCtx.postMessage({ type: 'validation_result', markers: [] });
         } catch (e: any) {
              // SQLite error: "near "x": syntax error"
              // It doesn't give line numbers easily, but we can return the message.
@@ -141,7 +140,7 @@ ctx.onmessage = async (event) => {
              // For now, mark the first line or try to regex extract "line X".
              // Actually, commonly it just fails. 
              // We will put a marker on the whole file or just return the error.
-             ctx.postMessage({ 
+             sqlCtx.postMessage({ 
                  type: 'validation_result', 
                  markers: [{
                      startLineNumber: 1,
@@ -159,34 +158,34 @@ ctx.onmessage = async (event) => {
     const sqlQuery = files?.[entryFile]?.content;
 
     if (!db) {
-         ctx.postMessage({ type: 'error', message: ['Database failed to initialize'] });
-         ctx.postMessage({ type: 'finished' });
+         sqlCtx.postMessage({ type: 'error', message: ['Database failed to initialize'] });
+         sqlCtx.postMessage({ type: 'finished' });
          return;
     }
 
     if (!sqlQuery) {
-         ctx.postMessage({ type: 'error', message: ['No query found'] });
-         ctx.postMessage({ type: 'finished' });
+         sqlCtx.postMessage({ type: 'error', message: ['No query found'] });
+         sqlCtx.postMessage({ type: 'finished' });
          return;
     }
 
     try {
         const results = db.exec(sqlQuery);
         if (results.length === 0) {
-            ctx.postMessage({ type: 'log', message: ['Query executed successfully. No results returned.'] });
+            sqlCtx.postMessage({ type: 'log', message: ['Query executed successfully. No results returned.'] });
         } else {
             results.forEach((res: any) => {
-                ctx.postMessage({ type: 'info', message: [`Result: ${res.columns.join(' | ')}`] });
-                ctx.postMessage({ type: 'log', message: ['----------------------------------------'] });
+                sqlCtx.postMessage({ type: 'info', message: [`Result: ${res.columns.join(' | ')}`] });
+                sqlCtx.postMessage({ type: 'log', message: ['----------------------------------------'] });
                 res.values.forEach((row: any) => {
-                    ctx.postMessage({ type: 'log', message: [row.join(' | ')] });
+                    sqlCtx.postMessage({ type: 'log', message: [row.join(' | ')] });
                 });
-                ctx.postMessage({ type: 'log', message: [`${res.values.length} rows returned.`] });
+                sqlCtx.postMessage({ type: 'log', message: [`${res.values.length} rows returned.`] });
             });
         }
     } catch (e: any) {
-        ctx.postMessage({ type: 'error', message: ['SQL Error: ' + e.message] });
+        sqlCtx.postMessage({ type: 'error', message: ['SQL Error: ' + e.message] });
     } finally {
+        sqlCtx.postMessage({ type: 'finished' });
+    }
 };
-
-export {};

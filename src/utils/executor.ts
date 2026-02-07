@@ -200,7 +200,9 @@ export const executeCode = (
 
   try {
     // Transpile all TS/JS files
-    const transpiledFiles: { [name: string]: string } = {};
+    console.log('[Executor] Starting execution...');
+    addLog({ type: 'info', message: ['[Executor] Starting execution...'] });
+    const transpiledFiles: { [name: string]: { content: string } } = {};
     
     Object.keys(files).forEach(fileName => {
         const f = files[fileName];
@@ -209,7 +211,7 @@ export const executeCode = (
                 // We use our existing transpile function (which sets jsx: React)
                 // Note: The transpile function in executor.ts is hardcoded for React JSX but sets target to ES2020 CJS.
                 // This fits our worker 'require' CJS simulation.
-                transpiledFiles[fileName] = transpile(f.content);
+                transpiledFiles[fileName] = { content: transpile(f.content) };
             } catch (e) {
                 console.error(`Failed to transpile ${fileName}`, e);
             }
@@ -232,11 +234,13 @@ export const executeCode = (
     };
 
     activeWorker.onerror = (e) => {
+        console.error('[Executor] Worker Error:', e);
         addLog({ type: 'error', message: ['Worker Error: ' + e.message] });
         if (onFinish) onFinish();
         terminateExecution();
     };
 
+    console.log('[Executor] Posting message to worker...');
     activeWorker.postMessage({ entryFile, files: transpiledFiles });
 
   } catch (err: any) {

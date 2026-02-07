@@ -47,6 +47,7 @@ function App() {
   };
 
   const addLog = useCallback((entry: Omit<LogEntry, 'timestamp'>) => {
+    console.log('App.addLog:', entry.message);
     setLogs(prev => [...prev, { ...entry, timestamp: Date.now() }]);
   }, []);
 
@@ -60,7 +61,9 @@ function App() {
         return;
     }
 
-    addLog({ type: 'info', message: [`Executing ${activeFile}...`] });
+    console.log('handleRun triggered for file:', activeFile);
+    // alert('Run button clicked!'); // Uncomment to debug if console is silent
+    addLog({ type: 'info', message: [`Run triggered for: ${activeFile}`] }); // Explicit immediate log
     setIsExecuting(true);
     
     // Small timeout to allow UI to update
