@@ -142,7 +142,6 @@ function App() {
                     <option value="markdown">Markdown</option>
                     <option value="sql">SQL (SQLite)</option>
                     <option value="react">React (TSX)</option>
-                    <option value="go">Go (Wasm)</option>
                 </select>
             </div>
         </div>
