@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { VscChevronUp, VscChevronDown, VscClearAll } from 'react-icons/vsc';
+import { VscChevronUp, VscChevronDown, VscClearAll, VscScreenFull, VscScreenNormal } from 'react-icons/vsc';
 
 export interface LogEntry {
   type: 'log' | 'warn' | 'error' | 'info';
@@ -11,10 +11,12 @@ interface ConsoleProps {
   logs: LogEntry[];
   onClear: () => void;
   onToggle: () => void;
+  onMaximize: () => void;
   isExpanded: boolean;
+  isMaximized: boolean;
 }
 
-const Console: React.FC<ConsoleProps> = ({ logs, onClear, onToggle, isExpanded }) => {
+const Console: React.FC<ConsoleProps> = ({ logs, onClear, onToggle, onMaximize, isExpanded, isMaximized }) => {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,6 +84,25 @@ const Console: React.FC<ConsoleProps> = ({ logs, onClear, onToggle, isExpanded }
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
                 <VscClearAll />
+            </button>
+            <button
+                onClick={onMaximize}
+                style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--md-text-medium)',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '4px'
+                }}
+                title={isMaximized ? "Restore Size" : "Maximize"}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+                {isMaximized ? <VscScreenNormal /> : <VscScreenFull />}
             </button>
             <button
                 onClick={onToggle}

@@ -16,7 +16,7 @@ function App() {
   const [isExecuting, setIsExecuting] = useState(false);
   
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
-  const [isConsoleExpanded, setIsConsoleExpanded] = useState(true);
+  const [consoleSize, setConsoleSize] = useState<'minimized' | 'normal' | 'maximized'>('normal');
   const [sqlSchema, setSqlSchema] = useState<any[]>([]);
 
   // Fetch schema when switching to SQL
@@ -52,7 +52,7 @@ function App() {
 
   const handleRun = () => {
     handleClearLogs();
-    setIsConsoleExpanded(true); // Open console on run
+    if (consoleSize === 'minimized') setConsoleSize('normal'); // Open console on run
     
     // Check if activeFile is valid
     if (!activeFile || !activeFileObj) {
@@ -192,7 +192,7 @@ function App() {
         )}
 
         {/* Center: Editor Area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
           {/* Tabs Bar */}
           <Tabs />
           
@@ -252,7 +252,12 @@ function App() {
 
           {/* Bottom Panel: Console */}
           <div style={{ 
-              height: isConsoleExpanded ? '220px' : '40px', 
+              height: consoleSize === 'maximized' ? '100%' : consoleSize === 'normal' ? '220px' : '40px', 
+              position: consoleSize === 'maximized' ? 'absolute' : 'relative',
+              top: consoleSize === 'maximized' ? 0 : 'auto',
+              bottom: 0,
+              width: '100%',
+              zIndex: 20,
               borderTop: 'var(--md-divider)', 
               display: 'flex', 
               flexDirection: 'column', 
@@ -262,8 +267,10 @@ function App() {
              <Console 
                 logs={logs} 
                 onClear={handleClearLogs} 
-                onToggle={() => setIsConsoleExpanded(!isConsoleExpanded)}
-                isExpanded={isConsoleExpanded}
+                onToggle={() => setConsoleSize(prev => prev === 'minimized' ? 'normal' : 'minimized')}
+                onMaximize={() => setConsoleSize(prev => prev === 'maximized' ? 'normal' : 'maximized')}
+                isExpanded={consoleSize !== 'minimized'}
+                isMaximized={consoleSize === 'maximized'}
              />
           </div>
         </div>
