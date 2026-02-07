@@ -20,22 +20,36 @@ export const transpile = (code: string): string => {
 
 import { executePythonCode } from './pythonExecutor';
 
+
+let activeWorker: Worker | null = null;
+
+export const terminateExecution = () => {
+  if (activeWorker) {
+    activeWorker.terminate();
+    activeWorker = null;
+  }
+};
+
 export const executeCode = (
   entryFile: string,
   files: { [name: string]: { content: string, language: string } },
   addLog: (entry: Omit<LogEntry, 'timestamp'>) => void,
-  onPreview?: (content: string) => void
+  onPreview?: (content: string) => void,
+  onFinish?: () => void
 ) => {
   const file = files[entryFile];
   if (!file) {
       addLog({ type: 'error', message: [`File not found: ${entryFile}`] });
+      if (onFinish) onFinish();
       return;
   }
   
   addLog({ type: 'info', message: [`Run request for ${entryFile} (${file.language})`] });
 
   if (file.language === 'python') {
-      executePythonCode(files, entryFile, addLog);
+      executePythonCode(files, entryFile, addLog).finally(() => {
+        if (onFinish) onFinish();
+      });
       return;
   }
 
@@ -46,14 +60,12 @@ export const executeCode = (
       } else {
           addLog({ type: 'warn', message: ['HTML Preview not supported in this view'] });
       }
+      if (onFinish) onFinish();
       return;
   }
 
   if (file.language === 'markdown') {
       if (onPreview) {
-         // Naive markdown rendering using marked via CDN (injected into preview iframe usually, or here we process it)
-         // For locally we can just inject a script into preview, or transform it here if we had the lib.
-         // Let's use the Preview Pane to render it by wrapping in HTML.
          const html = `
             <!DOCTYPE html>
             <html>
@@ -72,22 +84,17 @@ export const executeCode = (
          onPreview(html);
          addLog({ type: 'info', message: ['Rendering Markdown...'] });
       }
+      if (onFinish) onFinish();
       return;
   }
 
   if (file.language === 'sql') {
       addLog({ type: 'info', message: ['Executing SQL (loading SQLite)...'] });
-      // We need to load sql.js
-      // This is a bit complex for a single block, but we try a dynamic import approach or script injection in a worker
-      // For simplicity/demo:
+      // ... SQL implementation ... (keeping existing for brevity, wrapping onFinish if async)
+      // Since SQL was async in previous implementation, we should wrap it or just call onFinish after promise.
+      // Re-implementing the SQL block briefly to ensure onFinish is called.
       const runSQL = async () => {
           try {
-             // We need to load the WASM from CDN. 
-             // Ideally this should be in a separate file like pythonExecutor.ts
-             // But implementing inline for speed to fix user issue.
-             addLog({ type: 'info', message: ['Checking SQL.js...'] });
-             
-             // Check if script exists
              if (!(window as any).initSqlJs) {
                  await new Promise<void>((resolve, reject) => {
                      const script = document.createElement('script');
@@ -97,16 +104,11 @@ export const executeCode = (
                      document.body.appendChild(script);
                  });
              }
-
              const SQL = await (window as any).initSqlJs({
                  locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
              });
-             
              const db = new SQL.Database();
-             // Execute the query
-             // Split by semicolon to run multiple statements? SQL.js .exec runs multiple.
              const results = db.exec(file.content);
-             
              if (results.length === 0) {
                  addLog({ type: 'log', message: ['Query executed. No results returned.'] });
              } else {
@@ -119,6 +121,8 @@ export const executeCode = (
              }
           } catch (e: any) {
               addLog({ type: 'error', message: ['SQL Error: ' + e.message] });
+          } finally {
+              if (onFinish) onFinish();
           }
       };
       runSQL();
@@ -127,12 +131,8 @@ export const executeCode = (
 
   if (file.language === 'typescript' && entryFile === 'App.tsx' && onPreview) {
      addLog({ type: 'info', message: ['Bundling React App...'] });
-     
      try {
-         // Transpile the TSX code to JS using our existing transpile function
-         // This handles TS syntax and converts imports to CommonJS 'require' calls
          const transpiledCode = transpile(file.content);
-         
          const html = `
             <!DOCTYPE html>
             <html>
@@ -144,21 +144,14 @@ export const executeCode = (
             <body>
                 <div id="root"></div>
                 <script>
-                    // Shim require to return global React/ReactDOM
                     const require = (mod) => {
                         if (mod === 'react') return window.React;
                         if (mod === 'react-dom/client' || mod === 'react-dom') return window.ReactDOM;
                         throw new Error('Module not found: ' + mod);
                     };
-                    
                     const exports = {}; 
-                    
                     try {
-                        // The transpiled code will use 'require' and 'exports'
                         ${transpiledCode}
-                        
-                        // If the user exported default, try to use it if they didn't render manually
-                        // But our template renders manually, so this is just backup or no-op
                     } catch (err) {
                         document.body.innerHTML = '<pre style="color:red">' + err.message + '</pre>';
                         console.error(err);
@@ -171,78 +164,69 @@ export const executeCode = (
      } catch (e: any) {
          addLog({ type: 'error', message: ['Transpilation Error: ' + e.message] });
      }
+     if (onFinish) onFinish();
      return;
   }
   
   if (file.language === 'go') {
-      addLog({ type: 'warn', message: ['Go execution is not fully supported in the browser yet.', 'Please use the Go Playground for full execution.'] });
-      // Attempting to run real Go in browser without a dedicated worker/wasm setup is fragile.
-      // We will leave this as a stub message for now as per plan B.
+      addLog({ type: 'warn', message: ['Go execution is not fully supported in the browser yet.'] });
+      if (onFinish) onFinish();
       return;
   }
 
-  // Default to JavaScript/TypeScript execution from here
-  // Create a proxy console to capture logs
-  const customConsole = {
-    log: (...args: any[]) => addLog({ type: 'log', message: args.map(String) }),
-    warn: (...args: any[]) => addLog({ type: 'warn', message: args.map(String) }),
-    error: (...args: any[]) => addLog({ type: 'error', message: args.map(String) }),
-    info: (...args: any[]) => addLog({ type: 'info', message: args.map(String) }),
-    clear: () => {} 
-  };
-// ... rest of the JS execution logic ...
-
-  const moduleCache: { [path: string]: any } = {};
-
-  const require = (path: string) => {
-    // Basic resolution: assume relative paths ./name or just name map to name.ts or name.js
-    // This is very naive.
-    let targetFileName = path.replace('./', '');
-    if (!files[targetFileName]) {
-        if (files[targetFileName + '.ts']) targetFileName += '.ts';
-        else if (files[targetFileName + '.tsx']) targetFileName += '.tsx';
-        else if (files[targetFileName + '.js']) targetFileName += '.js';
-        else throw new Error(`Module not found: ${path}`);
-    }
-
-    if (moduleCache[targetFileName]) {
-        return moduleCache[targetFileName];
-    }
-
-    const fileContent = files[targetFileName].content;
-    const jsCode = transpile(fileContent);
-
-    const module = { exports: {} };
-    const exports = module.exports;
-
-    try {
-        const run = new Function('console', 'require', 'module', 'exports', jsCode);
-        run(customConsole, require, module, exports);
-    } catch (err: any) {
-        throw new Error(`Error executing ${targetFileName}: ${err.message}`);
-    }
-
-    moduleCache[targetFileName] = module.exports;
-    return module.exports;
-  };
+  // JS/TS Execution via Web Worker
+  terminateExecution(); // Cleanup previous
 
   try {
-    // Execute the entry file (usually main.ts/active file) using the require mechanism
-    // but without caching it effectively (or just treat it as a module).
-    // We treat the entry execution as a pseudo-require to reuse logic, or just run it.
-    // However, the entry file itself might have exports, so treating it as a module is fine.
+    // Transpile all TS/JS files
+    const transpiledFiles: { [name: string]: string } = {};
     
-    // We wrapped the logic in require, so let's just use it on the entry file.
-    // BUT, the entry file name comes in as argument.
-    
-    // Actually, executeCode was called with `code` string before. 
-    // Now we change it to take `files` and `entryFileName` (or active file).
-    // The previous caller passed `transpile(code)`. Now we want to control transpilation 
-    // inside here to handle dependencies.
-    
-    require(entryFile);
+    Object.keys(files).forEach(fileName => {
+        const f = files[fileName];
+        if (f.language === 'typescript' || f.language === 'javascript' || fileName.endsWith('.ts') || fileName.endsWith('.js') || fileName.endsWith('.tsx')) {
+            try {
+                // Determine if JSX/TSX
+                const isJsx = fileName.endsWith('.tsx') || fileName.endsWith('.jsx'); 
+                // We use our existing transpile function (which sets jsx: React)
+                // Note: The transpile function in executor.ts is hardcoded for React JSX but sets target to ES2020 CJS.
+                // This fits our worker 'require' CJS simulation.
+                transpiledFiles[fileName] = transpile(f.content);
+            } catch (e) {
+                console.error(`Failed to transpile ${fileName}`, e);
+            }
+        }
+    });
+
+    activeWorker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+
+    activeWorker.onmessage = (e) => {
+        const { type, message } = e.data;
+        if (type === 'log') addLog({ type: 'log', message });
+        else if (type === 'warn') addLog({ type: 'warn', message });
+        else if (type === 'error') addLog({ type: 'error', message });
+        else if (type === 'info') addLog({ type: 'info', message });
+        else if (type === 'finished') {
+             if (onFinish) onFinish();
+             // We don't terminate immediately to allow async operations if any were started?
+             // But our worker model is "run script then done" for now. 
+             // If we terminate, we kill asyncs.
+             // If we don't, we leave worker running.
+             // For "Run" button to toggle back, we need to know we are done.
+             // Let's assume done.
+             terminateExecution();
+        }
+    };
+
+    activeWorker.onerror = (e) => {
+        addLog({ type: 'error', message: ['Worker Error: ' + e.message] });
+        if (onFinish) onFinish();
+        terminateExecution();
+    };
+
+    activeWorker.postMessage({ entryFile, files: transpiledFiles });
 
   } catch (err: any) {
     addLog({ type: 'error', message: [err.toString()] });
+    if (onFinish) onFinish();
   }
 };

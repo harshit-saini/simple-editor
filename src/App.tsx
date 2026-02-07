@@ -4,13 +4,14 @@ import Console, { LogEntry } from './components/Console';
 import FileExplorer from './components/FileExplorer';
 import Tabs from './components/Tabs';
 import { useFileSystem } from './contexts/FileSystemContext';
-import { executeCode } from './utils/executor';
+import { executeCode, terminateExecution } from './utils/executor';
 
 function App() {
   const { activeFile, files, updateFile, languageMode, setLanguageMode } = useFileSystem();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
   
   const activeFileObj = activeFile ? files[activeFile] : null;
   const code = activeFileObj ? activeFileObj.content : '';
@@ -40,19 +41,33 @@ function App() {
     }
 
     addLog({ type: 'info', message: [`Executing ${activeFile}...`] });
+    setIsExecuting(true);
     
     // Small timeout to allow UI to update
     setTimeout(() => {
         try {
             // executeCode now handles transpilation, module resolution, and routing by language
-            executeCode(activeFile, files, addLog, (htmlContent) => {
-                setPreviewContent(htmlContent);
-                setShowPreview(true);
-            });
+            executeCode(
+                activeFile, 
+                files, 
+                addLog, 
+                (htmlContent) => {
+                    setPreviewContent(htmlContent);
+                    setShowPreview(true);
+                },
+                () => setIsExecuting(false)
+            );
         } catch (err: any) {
             addLog({ type: 'error', message: [err.message] });
+            setIsExecuting(false);
         }
     }, 10);
+  };
+
+  const handleStop = () => {
+      terminateExecution();
+      setIsExecuting(false);
+      addLog({ type: 'warn', message: ['Execution stopped by user.'] });
   };
 
   return (
@@ -106,12 +121,22 @@ function App() {
             </div>
         </div>
 
-        <button 
-          className="btn-material btn-primary"
-          onClick={handleRun}
-        >
-          <span>▶</span> RUN
-        </button>
+        {isExecuting ? (
+            <button 
+            className="btn-material"
+            style={{ backgroundColor: '#ff6b6b', color: 'white' }}
+            onClick={handleStop}
+            >
+            <span>⏹</span> STOP
+            </button>
+        ) : (
+            <button 
+            className="btn-material btn-primary"
+            onClick={handleRun}
+            >
+            <span>▶</span> RUN
+            </button>
+        )}
       </div>
 
       {/* Main Layout Area */}
