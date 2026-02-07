@@ -27,7 +27,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language, files
     // TypeScript Defaults
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ES2020,
-      allowNonTsExtensions: true,
       moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
       module: monaco.languages.typescript.ModuleKind.CommonJS,
       noEmit: true,
@@ -190,7 +189,52 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language, files
       return () => clearTimeout(timer);
   }, [code, language]);
 
-  // Debounce Type Acquisition for JS/TS
+  // SQL Validation Effect
+  useEffect(() => {
+      let worker: Worker | null = null;
+      const validate = () => {
+          if (language === 'sql' && monacoRef.current && editorRef.current) {
+              const model = editorRef.current.getModel();
+              if (model) {
+                  // Spin up a transient checker or reuse if possible?
+                  // Creating a worker every keystroke is expensive.
+                  // Ideally we should have a persistent worker for the editor session (like pythonLanguageWorker).
+                  // For now, let's use a lightweight check. 
+                  // actually, let's just use the executor's worker logic but simplified?
+                  // Or better: The sqlWorker is stateless-ish but we init DB every time in it.
+                  // We should probably rely on a dedicated language worker for SQL too if we want perf.
+                  // But for this task, let's try to just spawn it. It might be laggy.
+                  // OPTIMIZATION: Just spawn it. It's local WASM.
+                  worker = new Worker(new URL('../utils/sqlWorker.ts', import.meta.url));
+                  worker.onmessage = (e) => {
+                      const { type, markers } = e.data;
+                      if (type === 'validation_result' && monacoRef.current) {
+                         // Map severity 8 to Error
+                         const m = markers.map((mk: any) => ({
+                             ...mk,
+                             severity: monacoRef.current!.MarkerSeverity.Error
+                         }));
+                         monacoRef.current.editor.setModelMarkers(model, 'sql', m);
+                         worker?.terminate();
+                      }
+                  };
+                  worker.postMessage({ 
+                      type: 'validate', 
+                      entryFile: fileName, 
+                      files: { [fileName]: { content: code, language: 'sql' } } 
+                  });
+              }
+          }
+      };
+      
+      const timer = setTimeout(validate, 800);
+      return () => {
+          clearTimeout(timer);
+          if (worker) worker.terminate();
+      };
+  }, [code, language, fileName]);
+
+  // Debounce Type Acquisition for JS/TS only
   useEffect(() => {
      if (language === 'typescript' || language === 'javascript' || language === 'react') {
          const timer = setTimeout(() => {

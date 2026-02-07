@@ -4,8 +4,9 @@ import Console, { LogEntry } from './components/Console';
 import FileExplorer from './components/FileExplorer';
 import Tabs from './components/Tabs';
 import { useFileSystem } from './contexts/FileSystemContext';
-import { executeCode, terminateExecution } from './utils/executor';
+import { executeCode, terminateExecution, fetchSqlSchema } from './utils/executor';
 import { VscPlay, VscDebugStop, VscLayoutSidebarLeft, VscCode } from 'react-icons/vsc';
+import SchemaViewer from './components/SchemaViewer';
 
 function App() {
   const { activeFile, files, updateFile, languageMode, setLanguageMode } = useFileSystem();
@@ -16,6 +17,20 @@ function App() {
   
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [isConsoleExpanded, setIsConsoleExpanded] = useState(true);
+  const [sqlSchema, setSqlSchema] = useState<any[]>([]);
+
+  // Fetch schema when switching to SQL
+  const handleModeChange = (mode: string) => {
+      if (window.confirm('Switching language will reset your workspace. Are you sure?')) {
+          handleClearLogs();
+          setLanguageMode(mode as any);
+          if (mode === 'sql') {
+              fetchSqlSchema((schema) => {
+                  setSqlSchema(schema);
+              });
+          }
+      }
+  };
 
   const activeFileObj = activeFile ? files[activeFile] : null;
   const code = activeFileObj ? activeFileObj.content : '';
@@ -118,13 +133,7 @@ function App() {
                 <label style={{ fontSize: '0.8rem', color: 'var(--md-text-medium)' }}>MODE:</label>
                 <select 
                     value={languageMode} 
-                    onChange={(e) => {
-                        const mode = e.target.value as any;
-                        if (window.confirm('Switching language will reset your workspace. Are you sure?')) {
-                            handleClearLogs();
-                            setLanguageMode(mode);
-                        }
-                    }}
+                    onChange={(e) => handleModeChange(e.target.value)}
                     style={{
                         backgroundColor: 'var(--md-surface-1)',
                         color: 'var(--md-text-high)',
@@ -169,7 +178,18 @@ function App() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         
         {/* Left Sidebar: File Explorer */}
-        {isSidebarVisible && <FileExplorer />}
+        {isSidebarVisible && (
+            <div style={{ display: 'flex', flexDirection: 'column', width: '250px', borderRight: 'var(--md-divider)', backgroundColor: 'var(--md-surface-1)' }}>
+                {languageMode === 'sql' && (
+                    <div style={{ flex: 1, overflowY: 'auto', borderBottom: 'var(--md-divider)' }}>
+                        <SchemaViewer schema={sqlSchema} />
+                    </div>
+                )}
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                    <FileExplorer />
+                </div>
+            </div>
+        )}
 
         {/* Center: Editor Area */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>

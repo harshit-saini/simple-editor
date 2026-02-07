@@ -50,7 +50,7 @@ const MARKDOWN_TEMPLATE: { [name: string]: File } = {
 };
 
 const SQL_TEMPLATE: { [name: string]: File } = {
-  'queries.sql': { name: 'queries.sql', language: 'sql', content: `-- Create a table\nCREATE TABLE users (id INT, name TEXT);\nINSERT INTO users VALUES (1, 'Alice');\nSELECT * FROM users;` }
+  'queries.sql': { name: 'queries.sql', language: 'sql', content: `SELECT * FROM users;` }
 };
 
 const REACT_TEMPLATE: { [name: string]: File } = {

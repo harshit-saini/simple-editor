@@ -115,43 +115,38 @@ export const executeCode = (
   }
 
   if (file.language === 'sql') {
-      addLog({ type: 'info', message: ['Executing SQL (loading SQLite)...'] });
-      // ... SQL implementation ... (keeping existing for brevity, wrapping onFinish if async)
-      // Since SQL was async in previous implementation, we should wrap it or just call onFinish after promise.
-      // Re-implementing the SQL block briefly to ensure onFinish is called.
-      const runSQL = async () => {
-          try {
-             if (!(window as any).initSqlJs) {
-                 await new Promise<void>((resolve, reject) => {
-                     const script = document.createElement('script');
-                     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js';
-                     script.onload = () => resolve();
-                     script.onerror = () => reject(new Error('Failed to load SQL.js'));
-                     document.body.appendChild(script);
-                 });
-             }
-             const SQL = await (window as any).initSqlJs({
-                 locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-             });
-             const db = new SQL.Database();
-             const results = db.exec(file.content);
-             if (results.length === 0) {
-                 addLog({ type: 'log', message: ['Query executed. No results returned.'] });
-             } else {
-                 results.forEach((res: any) => {
-                     addLog({ type: 'info', message: [`Result: ${res.columns.join(' | ')}`] });
-                     res.values.forEach((row: any) => {
-                         addLog({ type: 'log', message: [row.join(' | ')] });
-                     });
-                 });
-             }
-          } catch (e: any) {
-              addLog({ type: 'error', message: ['SQL Error: ' + e.message] });
-          } finally {
-              if (onFinish) onFinish();
-          }
-      };
-      runSQL();
+      addLog({ type: 'info', message: ['Executing SQL...'] });
+      
+      // SQL Execution via Web Worker
+      terminateExecution(); // Cleanup previous
+
+      try {
+           activeWorker = new Worker(new URL('./sqlWorker.ts', import.meta.url));
+
+           activeWorker.onmessage = (e) => {
+               const { type, message } = e.data;
+               if (type === 'log') addLog({ type: 'log', message });
+               else if (type === 'warn') addLog({ type: 'warn', message });
+               else if (type === 'error') addLog({ type: 'error', message });
+               else if (type === 'info') addLog({ type: 'info', message });
+               else if (type === 'finished') {
+                    if (onFinish) onFinish();
+                    terminateExecution();
+               }
+           };
+
+           activeWorker.onerror = (e) => {
+               addLog({ type: 'error', message: ['Worker Error: ' + e.message] });
+               if (onFinish) onFinish();
+               terminateExecution();
+           };
+
+           activeWorker.postMessage({ entryFile, files });
+
+      } catch (err: any) {
+           addLog({ type: 'error', message: [err.toString()] });
+           if (onFinish) onFinish();
+      }
       return;
   }
 
@@ -248,4 +243,20 @@ export const executeCode = (
     addLog({ type: 'error', message: [err.toString()] });
     if (onFinish) onFinish();
   }
+};
+// Helper to fetch schema without executing code
+export const fetchSqlSchema = (callback: (schema: any[]) => void) => {
+    try {
+        const worker = new Worker(new URL('./sqlWorker.ts', import.meta.url));
+        worker.onmessage = (e) => {
+            const { type, schema } = e.data;
+            if (type === 'schema') {
+                callback(schema);
+                worker.terminate();
+            }
+        };
+        worker.postMessage({ type: 'get_schema' }); 
+    } catch (e) {
+        console.error("Failed to fetch schema", e);
+    }
 };
