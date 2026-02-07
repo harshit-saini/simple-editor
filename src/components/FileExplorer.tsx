@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
+import { VscNewFile, VscTrash, VscJson, VscMarkdown } from 'react-icons/vsc';
+import { SiTypescript, SiReact, SiJavascript, SiHtml5, SiCss3, SiPython, SiGo, SiSqlite } from 'react-icons/si';
 
 const FileExplorer: React.FC = () => {
   const { files, activeFile, selectFile, createFile, deleteFile } = useFileSystem();
@@ -43,15 +45,19 @@ const FileExplorer: React.FC = () => {
             style={{ 
                 background: 'none', 
                 border: 'none', 
-                color: 'var(--md-primary)', 
+                color: 'var(--md-text-medium)', 
                 cursor: 'pointer', 
                 fontSize: '1.2rem',
-                padding: '0 4px',
-                lineHeight: 1
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '4px'
             }} 
             title="New File"
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--md-primary)'; e.currentTarget.style.backgroundColor = 'var(--md-surface-2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--md-text-medium)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
-         +
+         <VscNewFile />
         </button>
       </div>
 
@@ -97,7 +103,7 @@ const FileExplorer: React.FC = () => {
             className="file-item"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                 <span style={{ fontSize: '1rem', color: getFileIconColor(fileName.split('.').pop()) }}>
+                 <span style={{ fontSize: '1rem', color: getFileIconColor(fileName.split('.').pop()), display: 'flex', alignItems: 'center' }}>
                      {getFileIcon(fileName)}
                  </span>
                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fileName}</span>
@@ -116,14 +122,16 @@ const FileExplorer: React.FC = () => {
                 color: 'var(--md-text-disabled)',
                 cursor: 'pointer',
                 opacity: 0,
-                fontSize: '0.8rem',
-                padding: '4px'
+                fontSize: '0.9rem',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center'
               }}
               className="delete-btn"
               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--md-error)'}
               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--md-text-disabled)'}
             >
-              ✕
+              <VscTrash />
             </button>
           </div>
         ))}
@@ -142,17 +150,17 @@ const FileExplorer: React.FC = () => {
 const getFileIcon = (fileName: string) => {
     const ext = fileName.split('.').pop();
     switch(ext) {
-        case 'ts': return '📄'; // TS
-        case 'tsx': return '⚛️'; // React
-        case 'js': return '📄'; // JS
-        case 'html': return '🌐'; // HTML
-        case 'css': return '🎨'; // CSS
-        case 'py': return '🐍'; // Python
-        case 'json': return '📋'; // JSON
-        case 'md': return '📝'; // Markdown
-        case 'sql': return '🗄️'; // SQL
-        case 'go': return '🐹'; // Go
-        default: return '📄';
+        case 'ts': return <SiTypescript />;
+        case 'tsx': return <SiReact />;
+        case 'js': return <SiJavascript />;
+        case 'html': return <SiHtml5 />;
+        case 'css': return <SiCss3 />;
+        case 'py': return <SiPython />;
+        case 'json': return <VscJson />;
+        case 'md': return <VscMarkdown />;
+        case 'sql': return <SiSqlite />;
+        case 'go': return <SiGo />;
+        default: return <VscNewFile />;
     }
 }
 

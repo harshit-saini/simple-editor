@@ -5,6 +5,7 @@ import FileExplorer from './components/FileExplorer';
 import Tabs from './components/Tabs';
 import { useFileSystem } from './contexts/FileSystemContext';
 import { executeCode, terminateExecution } from './utils/executor';
+import { VscPlay, VscDebugStop, VscLayoutSidebarLeft, VscCode } from 'react-icons/vsc';
 
 function App() {
   const { activeFile, files, updateFile, languageMode, setLanguageMode } = useFileSystem();
@@ -13,6 +14,9 @@ function App() {
   const [showPreview, setShowPreview] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [isConsoleExpanded, setIsConsoleExpanded] = useState(true);
+
   const activeFileObj = activeFile ? files[activeFile] : null;
   const code = activeFileObj ? activeFileObj.content : '';
   const language = activeFileObj ? activeFileObj.language : 'typescript';
@@ -33,6 +37,7 @@ function App() {
 
   const handleRun = () => {
     handleClearLogs();
+    setIsConsoleExpanded(true); // Open console on run
     
     // Check if activeFile is valid
     if (!activeFile || !activeFileObj) {
@@ -84,8 +89,29 @@ function App() {
         zIndex: 10
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <div style={{ fontWeight: '500', fontSize: '1.1rem', color: 'var(--md-text-high)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: 'var(--md-primary)' }}>&lt;/&gt;</span> TS Editor Pro
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                 <button
+                    onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--md-text-medium)',
+                        cursor: 'pointer',
+                        fontSize: '1.2rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '4px',
+                        borderRadius: '4px'
+                    }}
+                    title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--md-surface-overlap)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                 >
+                    <VscLayoutSidebarLeft />
+                 </button>
+                 <div style={{ fontWeight: '500', fontSize: '1.1rem', color: 'var(--md-text-high)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: 'var(--md-primary)', display: 'flex', alignItems: 'center' }}><VscCode size={20} /></span> TS Editor Pro
+                </div>
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -124,17 +150,18 @@ function App() {
         {isExecuting ? (
             <button 
             className="btn-material"
-            style={{ backgroundColor: '#ff6b6b', color: 'white' }}
+            style={{ backgroundColor: '#ff6b6b', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}
             onClick={handleStop}
             >
-            <span>⏹</span> STOP
+            <VscDebugStop /> STOP
             </button>
         ) : (
             <button 
             className="btn-material btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             onClick={handleRun}
             >
-            <span>▶</span> RUN
+            <VscPlay /> RUN
             </button>
         )}
       </div>
@@ -143,7 +170,7 @@ function App() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         
         {/* Left Sidebar: File Explorer */}
-        <FileExplorer />
+        {isSidebarVisible && <FileExplorer />}
 
         {/* Center: Editor Area */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -205,8 +232,20 @@ function App() {
 
 
           {/* Bottom Panel: Console */}
-          <div style={{ height: '220px', borderTop: 'var(--md-divider)', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--md-bg-root)' }}>
-             <Console logs={logs} onClear={handleClearLogs} />
+          <div style={{ 
+              height: isConsoleExpanded ? '220px' : '40px', 
+              borderTop: 'var(--md-divider)', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              backgroundColor: 'var(--md-bg-root)',
+              transition: 'height 0.2s ease-in-out'
+          }}>
+             <Console 
+                logs={logs} 
+                onClear={handleClearLogs} 
+                onToggle={() => setIsConsoleExpanded(!isConsoleExpanded)}
+                isExpanded={isConsoleExpanded}
+             />
           </div>
         </div>
         
