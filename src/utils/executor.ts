@@ -18,7 +18,6 @@ export const transpile = (code: string): string => {
   }
 };
 
-import { executePythonCode } from './pythonExecutor';
 
 
 let activeWorker: Worker | null = null;
@@ -47,10 +46,37 @@ export const executeCode = (
   addLog({ type: 'info', message: [`Run request for ${entryFile} (${file.language})`] });
 
   if (file.language === 'python') {
-      executePythonCode(files, entryFile, addLog).finally(() => {
-        if (onFinish) onFinish();
-      });
-      return;
+       // Python Execution via Web Worker
+       terminateExecution(); // Cleanup previous
+
+       try {
+           activeWorker = new Worker(new URL('./pythonWorker.ts', import.meta.url), { type: 'module' });
+
+           activeWorker.onmessage = (e) => {
+               const { type, message } = e.data;
+               if (type === 'log') addLog({ type: 'log', message });
+               else if (type === 'warn') addLog({ type: 'warn', message });
+               else if (type === 'error') addLog({ type: 'error', message });
+               else if (type === 'info') addLog({ type: 'info', message });
+               else if (type === 'finished') {
+                    if (onFinish) onFinish();
+                    terminateExecution();
+               }
+           };
+
+           activeWorker.onerror = (e) => {
+               addLog({ type: 'error', message: ['Worker Error: ' + e.message] });
+               if (onFinish) onFinish();
+               terminateExecution();
+           };
+
+           activeWorker.postMessage({ entryFile, files });
+
+       } catch (err: any) {
+           addLog({ type: 'error', message: [err.toString()] });
+           if (onFinish) onFinish();
+       }
+       return;
   }
 
   if (file.language === 'html') {
