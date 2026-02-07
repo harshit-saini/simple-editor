@@ -187,6 +187,6 @@ ctx.onmessage = async (event) => {
     } catch (e: any) {
         ctx.postMessage({ type: 'error', message: ['SQL Error: ' + e.message] });
     } finally {
-        ctx.postMessage({ type: 'finished' });
-    }
 };
+
+export {};

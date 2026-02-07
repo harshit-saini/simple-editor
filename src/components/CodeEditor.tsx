@@ -102,34 +102,46 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, language, files
     // Register Snippets for TS/JS
     monaco.languages.registerCompletionItemProvider('typescript', {
         provideCompletionItems: (model, position) => {
+             const word = model.getWordUntilPosition(position);
+             const range = {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: word.startColumn,
+                endColumn: word.endColumn,
+             };
+            
             const suggestions = [
                 {
                     label: 'clg',
                     kind: monaco.languages.CompletionItemKind.Snippet,
                     insertText: 'console.log(${1:variable});',
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                    documentation: 'Log to console'
+                    documentation: 'Log to console',
+                    range: range
                 },
                 {
                     label: 'rfc',
                     kind: monaco.languages.CompletionItemKind.Snippet,
                     insertText: 'export default function ${1:ComponentName}() {\n\treturn (\n\t\t<div>${2:Hello}</div>\n\t);\n}',
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                    documentation: 'React Functional Component'
+                    documentation: 'React Functional Component',
+                    range: range
                 },
                 {
                     label: 'uef',
                     kind: monaco.languages.CompletionItemKind.Snippet,
                     insertText: 'useEffect(() => {\n\t${1}\n}, [${2}]);',
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                    documentation: 'useEffect Hook'
+                    documentation: 'useEffect Hook',
+                    range: range
                 },
                 {
                     label: 'us',
                     kind: monaco.languages.CompletionItemKind.Snippet,
                     insertText: 'const [${1:state}, set${1/(.*)/${1:/capitalize}/}] = useState(${2:initialState});',
                     insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                    documentation: 'useState Hook'
+                    documentation: 'useState Hook',
+                    range: range
                 }
             ];
             return { suggestions: suggestions };

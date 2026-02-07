@@ -7,8 +7,9 @@ const loadPyodideRuntime = async () => {
     if (pyodide) return pyodide;
     
     try {
-        const { loadPyodide } = await import('https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.mjs');
-        pyodide = await loadPyodide();
+        // @ts-ignore
+        const pyodideModule = await import('https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.mjs');
+        pyodide = await pyodideModule.loadPyodide();
         
         // Install dependencies
         await pyodide.loadPackage(['micropip']);

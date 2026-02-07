@@ -7,8 +7,9 @@ const loadPyodideRuntime = async () => {
     ctx.postMessage({ type: 'info', message: ['Loading Pyodide (Python Runtime)...'] });
     try {
         // Dynamic import for the ES module version of Pyodide
-        const { loadPyodide } = await import('https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.mjs');
-        pyodide = await loadPyodide();
+        // @ts-ignore
+        const pyodideModule = await import('https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.mjs');
+        pyodide = await pyodideModule.loadPyodide();
         ctx.postMessage({ type: 'info', message: ['Pyodide loaded successfully!'] });
         return pyodide;
     } catch (e: any) {
