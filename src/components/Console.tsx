@@ -1,5 +1,13 @@
-import React, { useEffect, useRef } from 'react';
-import { VscChevronUp, VscChevronDown, VscClearAll, VscScreenFull, VscScreenNormal } from 'react-icons/vsc';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  VscChevronUp,
+  VscChevronDown,
+  VscClearAll,
+  VscScreenFull,
+  VscScreenNormal,
+  VscCopy,
+  VscSave
+} from 'react-icons/vsc';
 
 export interface LogEntry {
   type: 'log' | 'warn' | 'error' | 'info';
@@ -16,148 +24,148 @@ interface ConsoleProps {
   isMaximized: boolean;
 }
 
+const LOG_FILTERS: Array<{ label: string; value: LogEntry['type'] | 'all' }> = [
+  { label: 'All', value: 'all' },
+  { label: 'Info', value: 'info' },
+  { label: 'Log', value: 'log' },
+  { label: 'Warn', value: 'warn' },
+  { label: 'Error', value: 'error' }
+];
+
 const Console: React.FC<ConsoleProps> = ({ logs, onClear, onToggle, onMaximize, isExpanded, isMaximized }) => {
   const endRef = useRef<HTMLDivElement>(null);
+  const [activeFilter, setActiveFilter] = useState<LogEntry['type'] | 'all'>('all');
 
   useEffect(() => {
     if (isExpanded) {
-        endRef.current?.scrollIntoView({ behavior: 'smooth' });
+      endRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [logs, isExpanded]);
 
+  const filteredLogs = useMemo(() => {
+    if (activeFilter === 'all') return logs;
+    return logs.filter((log) => log.type === activeFilter);
+  }, [activeFilter, logs]);
+
   const getLogColor = (type: LogEntry['type']) => {
     switch (type) {
-      case 'error': return '#ff6b6b';
-      case 'warn': return '#feca57';
-      case 'info': return '#54a0ff';
-      default: return '#c8d6e5';
+      case 'error':
+        return '#ff6f7c';
+      case 'warn':
+        return '#f8c75a';
+      case 'info':
+        return '#79b8ff';
+      default:
+        return '#d2dcf5';
     }
   };
 
+  const serializeLogs = () => {
+    return logs
+      .map((log) => {
+        const time = new Date(log.timestamp).toLocaleTimeString();
+        return `[${time}] [${log.type.toUpperCase()}] ${log.message.join(' ')}`;
+      })
+      .join('\n');
+  };
+
+  const handleCopyLogs = async () => {
+    if (logs.length === 0 || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(serializeLogs());
+    } catch {
+      // Ignore clipboard permission errors.
+    }
+  };
+
+  const handleDownloadLogs = () => {
+    if (logs.length === 0) return;
+
+    const blob = new Blob([serializeLogs()], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `console-${new Date().toISOString().replace(/[:.]/g, '-')}.log`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div style={{ 
-      height: '100%', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      backgroundColor: '#1e1e1e', 
-      borderTop: '1px solid #333',
-      fontFamily: 'monospace' 
-    }}>
-      <div style={{ 
-        padding: '0 16px', 
-        height: '40px',
-        borderBottom: isExpanded ? '1px solid #333' : 'none', 
-        display: 'flex', 
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: '0.8rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-        fontWeight: 500,
-        backgroundColor: '#252526',
-        userSelect: 'none',
-        cursor: 'pointer'
-      }} onClick={onToggle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-             <span style={{ display: 'flex', alignItems: 'center' }}>
-                {isExpanded ? <VscChevronDown /> : <VscChevronUp />}
-             </span>
-             <span>TERMINAL / CONSOLE</span>
+    <div className="console-panel">
+      <div className="console-header" onClick={onToggle}>
+        <div className="console-title-wrap">
+          <span className="console-chevron">
+            {isExpanded ? <VscChevronDown /> : <VscChevronUp />}
+          </span>
+          <span className="console-title">Terminal / Console</span>
+          <span className="console-count">{logs.length} entries</span>
         </div>
-        
-        <div style={{ display: 'flex', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
-            <button
-                onClick={onClear}
-                style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--md-text-medium)',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '4px'
-                }}
-                title="Clear Console"
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-                <VscClearAll />
-            </button>
-            <button
-                onClick={onMaximize}
-                style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--md-text-medium)',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '4px'
-                }}
-                title={isMaximized ? "Restore Size" : "Maximize"}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-                {isMaximized ? <VscScreenNormal /> : <VscScreenFull />}
-            </button>
-            <button
-                onClick={onToggle}
-                style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--md-text-medium)',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '4px'
-                }}
-                title={isExpanded ? "Minimize" : "Restore"}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-                {isExpanded ? <VscChevronDown /> : <VscChevronUp />}
-            </button>
+
+        <div className="console-controls" onClick={(event) => event.stopPropagation()}>
+          <button className="icon-button" onClick={onClear} title="Clear Console">
+            <VscClearAll />
+          </button>
+          <button
+            className="icon-button"
+            onClick={handleCopyLogs}
+            title="Copy Logs"
+            disabled={logs.length === 0}
+          >
+            <VscCopy />
+          </button>
+          <button
+            className="icon-button"
+            onClick={handleDownloadLogs}
+            title="Download Logs"
+            disabled={logs.length === 0}
+          >
+            <VscSave />
+          </button>
+          <button
+            className="icon-button"
+            onClick={onMaximize}
+            title={isMaximized ? 'Restore Size' : 'Maximize'}
+          >
+            {isMaximized ? <VscScreenNormal /> : <VscScreenFull />}
+          </button>
+          <button
+            className="icon-button"
+            onClick={onToggle}
+            title={isExpanded ? 'Minimize' : 'Restore'}
+          >
+            {isExpanded ? <VscChevronDown /> : <VscChevronUp />}
+          </button>
         </div>
       </div>
-      
+
       {isExpanded && (
-        <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '8px 16px',
-            fontFamily: 'var(--font-mono)',
-            fontSize: '13px'
-        }}>
-            {logs.map((log, i) => (
-            <div key={i} style={{
-                color: getLogColor(log.type),
-                marginBottom: '4px',
-                borderBottom: '1px solid rgba(255,255,255,0.05)',
-                paddingBottom: '2px',
-                wordWrap: 'break-word'
-            }}>
-                <span style={{ color: 'var(--md-text-disabled)', marginRight: '8px', userSelect: 'none' }}>
-                    {new Date(log.timestamp).toLocaleTimeString()}
-                </span>
-                {/* Render message lines cleanly */}
-                {log.message.map((line, j) => (
-                    <span key={j}>{line} </span>
-                ))}
-            </div>
+        <>
+          <div className="console-filter-row">
+            {LOG_FILTERS.map((filter) => (
+              <button
+                key={filter.value}
+                className={`console-filter-btn ${activeFilter === filter.value ? 'is-active' : ''}`}
+                onClick={() => setActiveFilter(filter.value)}
+              >
+                {filter.label}
+              </button>
             ))}
-            {logs.length === 0 && (
-                <div style={{ color: 'var(--md-text-disabled)', fontStyle: 'italic', marginTop: '10px' }}>
-                    Ready to execute...
-                </div>
+          </div>
+
+          <div className="console-body">
+            {filteredLogs.map((log, index) => (
+              <div key={`${log.timestamp}-${index}`} className="console-line" style={{ color: getLogColor(log.type) }}>
+                <span className="console-time">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                <span className="console-message">{log.message.join(' ')}</span>
+              </div>
+            ))}
+
+            {filteredLogs.length === 0 && (
+              <div className="console-empty">Ready to execute...</div>
             )}
             <div ref={endRef} />
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
